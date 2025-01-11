@@ -104,8 +104,10 @@ class _FirstSplashScreenState extends State<FirstSplashScreen> {
                 width: double.infinity,
                 height: 60,
                 child: customButton(
-                  color: whiteColor,
-                  onPress: () {},
+                  color: Colors.white,
+                  onPress: () {
+                    Get.to(()=>LoginScreen());
+                  },
                   textcolor: const Color(0xFF378B12),
                   title: "Get Started",
                 ),

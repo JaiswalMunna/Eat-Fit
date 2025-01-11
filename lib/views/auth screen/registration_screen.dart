@@ -1,22 +1,27 @@
-import 'package:eat_fit/consts/consts.dart';
-import 'package:eat_fit/views/auth%20screen/registration_screen.dart';
-import 'package:get/get.dart';
-import '../home_screen/home_screen.dart';
+import 'package:flutter/material.dart';
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+import 'login_screen.dart';
+
+class RegistrationScreen extends StatefulWidget {
+  const RegistrationScreen({super.key});
+
+  @override
+  State<RegistrationScreen> createState() => _RegistrationScreenState();
+}
+
+class _RegistrationScreenState extends State<RegistrationScreen> {
+  bool _isPasswordVisible = false;
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.white, // Set background color to white
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          "Log In",
+          "Register",
           style: TextStyle(
             color: Colors.black,
             fontSize: 20,
@@ -34,10 +39,10 @@ class LoginScreen extends StatelessWidget {
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: size.width * 0.08),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Text(
-              "Welcome Back",
+              "Create an account",
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -46,13 +51,33 @@ class LoginScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              "Log in to your account",
+              "Fill in the details to get started",
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey,
               ),
             ),
             const SizedBox(height: 30),
+            // First Name Field
+            TextField(
+              decoration: InputDecoration(
+                labelText: "First Name",
+                border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                prefixIcon: const Icon(Icons.person),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Last Name Field
+            TextField(
+              decoration: InputDecoration(
+                labelText: "Last Name",
+                border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                prefixIcon: const Icon(Icons.person_outline),
+              ),
+            ),
+            const SizedBox(height: 20),
             // Email Field
             TextField(
               keyboardType: TextInputType.emailAddress,
@@ -66,21 +91,33 @@ class LoginScreen extends StatelessWidget {
             const SizedBox(height: 20),
             // Password Field
             TextField(
-              obscureText: true,
+              obscureText: !_isPasswordVisible,
               decoration: InputDecoration(
                 labelText: "Password",
                 border:
                 OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 prefixIcon: const Icon(Icons.lock),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 30),
-            // Login Button
+            // Register Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Get.to(()=>HomeScreen());
+                  // Handle registration logic here
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF34C759),
@@ -92,7 +129,7 @@ class LoginScreen extends StatelessWidget {
                   elevation: 10,
                 ),
                 child: Text(
-                  'Login',
+                  'Register',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -102,18 +139,17 @@ class LoginScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            // Registration Navigation
+            // Login Navigation
             Center(
               child: GestureDetector(
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => RegistrationScreen()),
+                    MaterialPageRoute(builder: (context) => LoginScreen()),
                   );
                 },
                 child: const Text(
-                  "Don't have an account? Register",
+                  "Already have an account? Log in",
                   style: TextStyle(
                     color: Colors.blue,
                     fontSize: 14,
