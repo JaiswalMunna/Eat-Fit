@@ -1,4 +1,6 @@
 import 'package:eat_fit/consts/consts.dart';
+import 'package:eat_fit/views/home_screen/diary/diary_screen.dart';
+import 'package:eat_fit/views/home_screen/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:eat_fit/views/splash_screen/first_splash_screen.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
@@ -19,13 +21,12 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
-        scaffoldBackgroundColor: Colors.transparent,
-        appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.transparent),
+        scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent),
         fontFamily: regular,
       ),
       home: FirstSplashScreen(),
+      // home: HomeScreen(),
     );
   }
 }
-

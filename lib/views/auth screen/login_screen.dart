@@ -1,10 +1,41 @@
+import 'package:eat_fit/app/main_page.dart';
 import 'package:eat_fit/consts/consts.dart';
 import 'package:eat_fit/views/auth%20screen/registration_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import '../home_screen/home_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  // textcontroller
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  Future signIn() async {
+    await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MainPage()),
+    );
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,22 +86,24 @@ class LoginScreen extends StatelessWidget {
             const SizedBox(height: 30),
             // Email Field
             TextField(
+              controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: "Email",
                 border:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 prefixIcon: const Icon(Icons.email),
               ),
             ),
             const SizedBox(height: 20),
             // Password Field
             TextField(
+              controller: _passwordController,
               obscureText: true,
               decoration: InputDecoration(
                 labelText: "Password",
                 border:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 prefixIcon: const Icon(Icons.lock),
               ),
             ),
@@ -79,9 +112,7 @@ class LoginScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  Get.to(()=>HomeScreen());
-                },
+                onPressed: signIn,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF34C759),
                   minimumSize: Size(315, 60),
