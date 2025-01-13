@@ -1,3 +1,5 @@
+import 'package:eat_fit/views/home_screen/profile/edit_profile.dart';
+import 'package:eat_fit/views/splash_screen/first_splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -88,8 +90,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
-    Navigator.pushReplacementNamed(
-        context, '/splash'); // Redirect to Splash Screen
+    Navigator.pushAndRemoveUntil<dynamic>(
+      context,
+      MaterialPageRoute<dynamic>(
+        builder: (BuildContext context) => FirstSplashScreen(),
+      ),
+      (route) => false, //if you want to disable back feature set to false
+    );
   }
 
   @override
@@ -145,6 +152,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   // Edit Profile Button
                   GestureDetector(
                     onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const EditProfileScreen()),
+                      );
                       // Navigate to Edit Profile (if needed)
                     },
                     child: Container(
