@@ -22,6 +22,7 @@
 //   }
 // }
 
+import 'package:eat_fit/views/home_screen/diary/diary_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:eat_fit/views/home_screen/home_screen.dart';
@@ -41,7 +42,8 @@ class MainPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasData) {
             // User is logged in
-            return const HomeScreen();
+            // return const HomeScreen();
+            return const DiaryScreen();
           } else {
             // User is not logged in
             return const LoginScreen();
