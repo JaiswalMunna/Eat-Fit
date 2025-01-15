@@ -1,7 +1,10 @@
+import 'package:eat_fit/controllers/cloudinary_upload.dart';
+import 'package:eat_fit/views/home_screen/profile/change_password.dart';
+import 'package:eat_fit/views/home_screen/profile/delete_account_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -63,52 +66,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  /// **Update profile picture**
-  Future<void> _uploadProfileImage() async {
-    try {
-      final pickedImage =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
-      if (pickedImage == null) return;
-
-      setState(() {
-        _isLoading = true;
-      });
-
-      final user = FirebaseAuth.instance.currentUser!;
-      final file = File(pickedImage.path);
-      final ref =
-          FirebaseStorage.instance.ref().child('profileImages/${user.uid}.jpg');
-      final uploadTask = ref.putFile(file);
-      final snapshot = await uploadTask.whenComplete(() => null);
-
-      final imageUrl = await snapshot.ref.getDownloadURL();
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
-        'profileImageUrl': imageUrl,
-      });
-
-      setState(() {
-        _profileImageUrl = imageUrl;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile picture updated successfully!")),
-      );
-    } catch (e) {
-      print("Error uploading profile image: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to upload profile picture.")),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   /// **Save updated profile data to Firestore**
   Future<void> _saveProfile() async {
     setState(() {
@@ -139,30 +96,58 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  /// **Logout function**
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.pushReplacementNamed(context, '/splash');
-  }
-
-  /// **Delete Account**
-  Future<void> _deleteAccount() async {
+  /// **Upload profile picture**
+  Future<void> _uploadProfileImage() async {
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      await user.delete();
+      final pickedImage =
+          await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (pickedImage == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No image selected.")),
+        );
+        return;
+      }
 
-      // Optionally delete user data from Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .delete();
+      setState(() {
+        _isLoading = true;
+      });
 
-      Navigator.pushReplacementNamed(context, '/splash');
+      final file = File(pickedImage.path);
+      final cloudinaryService = CloudinaryService();
+
+      // Upload the image to Cloudinary
+      final imageUrl = await cloudinaryService.uploadImageToCloudinary(file);
+
+      if (imageUrl != null) {
+        // Save the image URL to Firestore
+        final user = FirebaseAuth.instance.currentUser!;
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'profileImageUrl': imageUrl,
+        });
+
+        setState(() {
+          _profileImageUrl = imageUrl;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Profile picture updated successfully!")),
+        );
+      } else {
+        throw Exception("Cloudinary upload failed");
+      }
     } catch (e) {
-      print("Error deleting account: $e");
+      print("Error uploading profile image: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to delete account.")),
+        const SnackBar(content: Text("Failed to upload profile picture.")),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -198,11 +183,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         CircleAvatar(
                           radius: 55,
                           backgroundImage: _profileImageUrl != null
-                              ? NetworkImage(_profileImageUrl!)
-                              : const AssetImage('assets/icons/profile.jpg')
-                                  as ImageProvider,
-                          child:
-                              const Icon(Icons.camera_alt, color: Colors.white),
+                              ? NetworkImage(
+                                  _profileImageUrl!) // If image exists in Firebase Storage
+                              : const AssetImage(
+                                      '/Users/emilbasnyat/development/UI:UX_Mun/Eat-Fit/assets/images/profile.jpg')
+                                  as ImageProvider, // Fallback to default asset
+                          child: _profileImageUrl == null
+                              ? const Icon(Icons.camera_alt,
+                                  color: Colors
+                                      .white) // Show camera icon if no image
+                              : null,
                         ),
                         Positioned(
                           bottom: 10,
@@ -216,7 +206,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 color: const Color(0xFF35CC8C),
                                 borderRadius: BorderRadius.circular(30),
                               ),
-                              // something
                               child:
                                   const Icon(Icons.edit, color: Colors.white),
                             ),
@@ -224,23 +213,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ],
                     ),
-                    // hhh
                     const SizedBox(height: 20),
-                    _buildProfileField(
-                        "First Name", _firstNameController, true),
+                    _buildProfileField("First Name", _firstNameController, true,
+                        'assets/icons/name.png'),
                     const SizedBox(height: 10),
-                    _buildProfileField("Last Name", _lastNameController, true),
+                    _buildProfileField("Last Name", _lastNameController, true,
+                        'assets/icons/name.png'),
                     const SizedBox(height: 10),
-                    _buildProfileField("Email", _emailController, false),
-                    const SizedBox(height: 30),
+                    _buildProfileField("Email", _emailController, false,
+                        'assets/icons/email.png'),
+                    const SizedBox(height: 20),
                     const Divider(color: Colors.grey),
+                    const SizedBox(height: 20),
                     _buildOptionRow(
-                        "Change Password", const Color(0xFF35CC8C), () {}),
-                    const SizedBox(height: 10),
-                    _buildOptionRow("Logout", const Color(0xFFCB2030), _logout),
-                    const SizedBox(height: 10),
-                    _buildOptionRow("Delete Account", const Color(0xFFCB2030),
-                        _deleteAccount),
+                      "Change Password",
+                      const Color(0xFF35CC8C),
+                      'assets/icons/changepass.png',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChangePasswordScreen(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildOptionRow(
+                      "Delete Account",
+                      const Color(0xFFCB2030),
+                      'assets/icons/delete.png',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DeleteAccountScreen(),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 30),
                     GestureDetector(
                       onTap: _saveProfile,
@@ -270,32 +277,43 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildProfileField(
-      String label, TextEditingController controller, bool editable) {
+  Widget _buildProfileField(String label, TextEditingController controller,
+      bool editable, String iconPath) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: Colors.black)),
-        editable
-            ? Flexible(
-                child: TextField(
-                  controller: controller,
-                  decoration:
-                      const InputDecoration(border: UnderlineInputBorder()),
-                ),
-              )
-            : Text(controller.text,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF35CC8C))),
+        Row(
+          children: [
+            Image.asset(iconPath, width: 24, height: 24),
+            const SizedBox(width: 10),
+            Text(label,
+                style: const TextStyle(fontSize: 14, color: Colors.black)),
+          ],
+        ),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: TextField(
+              controller: controller,
+              enabled: editable,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                  color: editable ? const Color(0xFF35CC8C) : Colors.black),
+              decoration: const InputDecoration(border: InputBorder.none),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildOptionRow(String label, Color color, VoidCallback onTap) {
+  Widget _buildOptionRow(
+      String label, Color color, String iconPath, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Row(
         children: [
-          Container(width: 24, height: 24, color: color),
+          Image.asset(iconPath, width: 24, height: 24),
           const SizedBox(width: 12),
           Text(label, style: TextStyle(fontSize: 14, color: color)),
         ],

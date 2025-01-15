@@ -31,6 +31,7 @@ class AuthController {
         'lastName': lastName,
         'email': email,
         'createdAt': FieldValue.serverTimestamp(),
+        'profileImageUrl': '',
       });
       print('User data saved successfully!');
     } on FirebaseAuthException catch (e) {

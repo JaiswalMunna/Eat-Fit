@@ -50,44 +50,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     }
   }
 
-  Future<void> uploadProfileImage() async {
-    try {
-      final pickedImage =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
-      if (pickedImage == null) return;
-
-      File imageFile = File(pickedImage.path);
-      String uid = FirebaseAuth.instance.currentUser!.uid;
-
-      // Upload image to Firebase Storage
-      UploadTask uploadTask = FirebaseStorage.instance
-          .ref()
-          .child('profileImages/$uid.jpg')
-          .putFile(imageFile);
-
-      TaskSnapshot snapshot = await uploadTask;
-      String downloadUrl = await snapshot.ref.getDownloadURL();
-
-      // Update Firestore with new profile image URL
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'profileImageUrl': downloadUrl,
-      });
-
-      setState(() {
-        profileImageUrl = downloadUrl;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile picture updated successfully!")),
-      );
-    } catch (e) {
-      print("Error uploading profile image: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to upload profile picture.")),
-      );
-    }
-  }
-
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
     Navigator.pushAndRemoveUntil<dynamic>(
@@ -126,7 +88,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 children: [
                   // Profile Picture
                   GestureDetector(
-                    onTap: uploadProfileImage,
                     child: CircleAvatar(
                       radius: 60,
                       backgroundImage: profileImageUrl != null
@@ -134,7 +95,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           : const AssetImage(
                                   '/Users/emilbasnyat/development/UI:UX_Mun/Eat-Fit/assets/images/profile.jpg')
                               as ImageProvider,
-                      child: const Icon(Icons.camera_alt, color: Colors.white),
                     ),
                   ),
                   const SizedBox(height: 16),
