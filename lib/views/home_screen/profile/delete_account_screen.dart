@@ -1,3 +1,4 @@
+import 'package:eat_fit/views/auth%20screen/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,7 +13,7 @@ class DeleteAccountScreen extends StatefulWidget {
 class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
   bool _isLoading = false;
 
-  // / **Delete the user's account**
+  /// **Delete the user's account**
   Future<void> _deleteAccount(String password) async {
     try {
       setState(() {
@@ -37,11 +38,31 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       // Delete the user's account
       await user.delete();
 
-      // Navigate to the splash screen or login screen
-      Navigator.pushNamedAndRemoveUntil(context, '/splash', (route) => false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Account deleted successfully.")),
+      // Show success dialog and navigate to login screen
+      showDialog(
+        context: context,
+        barrierDismissible:
+            false, // Prevent closing the dialog by tapping outside
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("Account Deleted"),
+            content: const Text("Your account has been successfully deleted."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close the dialog
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const LoginScreen()),
+                    (route) => false,
+                  ); // Navigate to LoginScreen
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          );
+        },
       );
     } on FirebaseAuthException catch (e) {
       if (e.code == 'wrong-password') {

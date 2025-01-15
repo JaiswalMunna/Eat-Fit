@@ -1,10 +1,8 @@
 import 'package:eat_fit/app/main_page.dart';
 import 'package:eat_fit/consts/consts.dart';
 import 'package:eat_fit/views/auth%20screen/registration_screen.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:get/get.dart';
-import '../home_screen/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,24 +12,115 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // textcontroller
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  Future signIn() async {
-    await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const MainPage()),
-    );
+  bool _isPasswordVisible = false; // For toggling password visibility
+  bool _isLoading = false; // For showing loading state
+
+  Future<void> signIn() async {
+    setState(() {
+      _isLoading = true; // Set loading state to true
+    });
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      // Navigate to the MainPage after successful login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainPage()),
+      );
+    } on FirebaseAuthException catch (e) {
+      // Log the error code for debugging purposes
+      print("FirebaseAuthException code: ${e.code}");
+
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = "No user found with this email.";
+          break;
+        case 'wrong-password':
+          errorMessage = "Incorrect password.";
+          break;
+        case 'invalid-email':
+          errorMessage = "Invalid email address.";
+          break;
+        case 'invalid-credential': // Handle invalid credential case
+          errorMessage = "Invalid credentials provided.";
+          break;
+        default:
+          errorMessage = "An error occurred. Please try again.";
+      }
+
+      // Show the specific error message in a SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            errorMessage,
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      // Handle generic errors
+      print("Unknown error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            "Something went wrong. Please try again later.",
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      // Reset loading state
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
+
+  // Future<void> signIn() async {
+  //   setState(() {
+  //     _isLoading = true;
+  //   });
+
+  //   try {
+  //     await FirebaseAuth.instance.signInWithEmailAndPassword(
+  //       email: _emailController.text.trim(),
+  //       password: _passwordController.text.trim(),
+  //     );
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(builder: (context) => const MainPage()),
+  //     );
+  //   } on FirebaseAuthException catch (e) {
+  //     String errorMessage = "An error occurred. Please try again.";
+
+  //     if (e.code == 'user-not-found') {
+  //       errorMessage = "No user found with this email.";
+  //     } else if (e.code == 'wrong-password') {
+  //       errorMessage = "Incorrect password.";
+  //     }
+
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text(errorMessage)),
+  //     );
+  //   } finally {
+  //     setState(() {
+  //       _isLoading = false;
+  //     });
+  //   }
+  // }
 
   @override
   void dispose() {
-    // TODO: implement dispose
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -42,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.white, // Set background color to white
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -90,8 +179,9 @@ class _LoginScreenState extends State<LoginScreen> {
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: "Email",
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 prefixIcon: const Icon(Icons.email),
               ),
             ),
@@ -99,12 +189,25 @@ class _LoginScreenState extends State<LoginScreen> {
             // Password Field
             TextField(
               controller: _passwordController,
-              obscureText: true,
+              obscureText: !_isPasswordVisible,
               decoration: InputDecoration(
                 labelText: "Password",
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 prefixIcon: const Icon(Icons.lock),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 30),
@@ -112,24 +215,26 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: signIn,
+                onPressed: _isLoading ? null : signIn,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF34C759),
-                  minimumSize: Size(315, 60),
+                  backgroundColor: const Color(0xFF34C759),
+                  minimumSize: const Size(315, 60),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(99),
                   ),
-                  shadowColor: Color(0x4C95ADFE),
-                  elevation: 10,
                 ),
-                child: Text(
-                  'Login',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      )
+                    : const Text(
+                        'Login',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 10),
@@ -140,7 +245,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => RegistrationScreen()),
+                      builder: (context) => const RegistrationScreen(),
+                    ),
                   );
                 },
                 child: const Text(
