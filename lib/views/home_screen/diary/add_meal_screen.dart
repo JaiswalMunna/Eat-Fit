@@ -1,283 +1,8 @@
-// import 'package:flutter/material.dart';
-// import 'package:eat_fit/model/food_model.dart';
-// import 'package:eat_fit/model/mock_data.dart';
-
-// class AddMealScreen extends StatefulWidget {
-//   final String mealType;
-//   final Function(Food) onFoodAdded;
-
-//   const AddMealScreen({
-//     super.key,
-//     required this.mealType,
-//     required this.onFoodAdded,
-//   });
-
-//   @override
-//   State<AddMealScreen> createState() => _AddMealScreenState();
-// }
-
-// class _AddMealScreenState extends State<AddMealScreen> {
-//   final TextEditingController _searchController = TextEditingController();
-//   List<Food> _filteredFoods = mockFoods; // Initially display all foods
-//   List<Food> _selectedFoods = []; // List to store selected foods
-//   int _grams = 100;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _searchController.addListener(_filterFoods);
-//   }
-
-//   @override
-//   void dispose() {
-//     _searchController.removeListener(_filterFoods);
-//     _searchController.dispose();
-//     super.dispose();
-//   }
-
-//   /// Filters the food list based on the search input
-//   void _filterFoods() {
-//     setState(() {
-//       _filteredFoods = mockFoods
-//           .where((food) => food.name
-//               .toLowerCase()
-//               .contains(_searchController.text.trim().toLowerCase()))
-//           .toList();
-//     });
-//   }
-
-//   /// Displays the food details in a dialog
-//   void _showFoodDetails(BuildContext context, Food food) {
-//     showDialog(
-//       context: context,
-//       builder: (context) {
-//         return AlertDialog(
-//           title: Text(food.name),
-//           content: Column(
-//             mainAxisSize: MainAxisSize.min,
-//             children: [
-//               Text("${food.calories} Calories"),
-//               Text("${food.protein}g Protein"),
-//               Text("${food.fats}g Fats"),
-//               Text("${food.carbs}g Carbs"),
-//               const SizedBox(height: 10),
-//               Row(
-//                 children: [
-//                   const Text("Grams:"),
-//                   const SizedBox(width: 10),
-//                   Expanded(
-//                     child: TextField(
-//                       keyboardType: TextInputType.number,
-//                       onChanged: (value) {
-//                         setState(() {
-//                           _grams = int.tryParse(value) ?? 100;
-//                         });
-//                       },
-//                       decoration: const InputDecoration(
-//                         border: OutlineInputBorder(),
-//                         hintText: "100",
-//                       ),
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//             ],
-//           ),
-//           actions: [
-//             TextButton(
-//               onPressed: () {
-//                 Navigator.pop(context);
-//               },
-//               child: const Text("Cancel"),
-//             ),
-//             ElevatedButton(
-//               onPressed: () {
-//                 setState(() {
-//                   _selectedFoods.add(Food(
-//                     name: food.name,
-//                     calories: (food.calories * _grams ~/ 100),
-//                     protein: (food.protein * _grams ~/ 100),
-//                     fats: (food.fats * _grams ~/ 100),
-//                     carbs: (food.carbs * _grams ~/ 100),
-//                     grams: _grams,
-//                   ));
-//                 });
-//                 Navigator.pop(context);
-//                 Navigator.push(
-//                   context,
-//                   MaterialPageRoute(
-//                     builder: (context) => SelectedFoodScreen(
-//                       selectedFoods: _selectedFoods,
-//                       onAddMore: () => Navigator.pop(context),
-//                       onSave: () {
-//                         widget.onFoodAdded(
-//                             _selectedFoods.first); // Example handling
-//                         Navigator.pop(context);
-//                       },
-//                     ),
-//                   ),
-//                 );
-//               },
-//               child: const Text("OK"),
-//             ),
-//           ],
-//         );
-//       },
-//     );
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         backgroundColor: Colors.white,
-//         elevation: 0,
-//         centerTitle: true,
-//         title: const Text(
-//           "Search Food",
-//           style: TextStyle(color: Colors.black),
-//         ),
-//         leading: IconButton(
-//           icon: const Icon(Icons.arrow_back, color: Colors.black),
-//           onPressed: () {
-//             Navigator.pop(context);
-//           },
-//         ),
-//       ),
-//       body: Column(
-//         children: [
-//           Padding(
-//             padding: const EdgeInsets.all(16.0),
-//             child: TextField(
-//               controller: _searchController,
-//               decoration: const InputDecoration(
-//                 labelText: "Search food",
-//                 border: OutlineInputBorder(),
-//                 prefixIcon: Icon(Icons.search),
-//               ),
-//             ),
-//           ),
-//           Expanded(
-//             child: ListView.builder(
-//               itemCount: _filteredFoods.length,
-//               itemBuilder: (context, index) {
-//                 final food = _filteredFoods[index];
-//                 return ListTile(
-//                   title: Text(food.name),
-//                   subtitle: Text("${food.calories} cal / 100 g"),
-//                   onTap: () => _showFoodDetails(context, food),
-//                 );
-//               },
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-// class SelectedFoodScreen extends StatelessWidget {
-//   final List<Food> selectedFoods;
-//   final VoidCallback onAddMore;
-//   final VoidCallback onSave;
-
-//   const SelectedFoodScreen({
-//     super.key,
-//     required this.selectedFoods,
-//     required this.onAddMore,
-//     required this.onSave,
-//   });
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final totalCalories = selectedFoods.fold<int>(
-//       0,
-//       (sum, food) => sum + food.calories,
-//     );
-
-//     return Scaffold(
-//       appBar: AppBar(
-//         backgroundColor: Colors.white,
-//         elevation: 0,
-//         centerTitle: true,
-//         title: const Text(
-//           "Add Meal",
-//           style: TextStyle(color: Colors.black),
-//         ),
-//         actions: [
-//           IconButton(
-//             icon: const Icon(Icons.add, color: Colors.black),
-//             onPressed: onAddMore,
-//           ),
-//         ],
-//       ),
-//       body: Column(
-//         children: [
-//           Padding(
-//             padding: const EdgeInsets.all(16.0),
-//             child: Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-//               children: [
-//                 _buildNutritionInfo("Calories", "$totalCalories"),
-//                 _buildNutritionInfo(
-//                   "Proteins",
-//                   "${selectedFoods.fold<int>(0, (sum, food) => sum + food.protein)}g",
-//                 ),
-//                 _buildNutritionInfo(
-//                   "Fats",
-//                   "${selectedFoods.fold<int>(0, (sum, food) => sum + food.fats)}g",
-//                 ),
-//                 _buildNutritionInfo(
-//                   "Carbs",
-//                   "${selectedFoods.fold<int>(0, (sum, food) => sum + food.carbs)}g",
-//                 ),
-//               ],
-//             ),
-//           ),
-//           Expanded(
-//             child: ListView.builder(
-//               itemCount: selectedFoods.length,
-//               itemBuilder: (context, index) {
-//                 final food = selectedFoods[index];
-//                 return ListTile(
-//                   title: Text(food.name),
-//                   subtitle: Text("${food.grams} g • ${food.calories} Cal"),
-//                 );
-//               },
-//             ),
-//           ),
-//           Padding(
-//             padding: const EdgeInsets.all(16.0),
-//             child: ElevatedButton(
-//               onPressed: onSave,
-//               style: ElevatedButton.styleFrom(
-//                 minimumSize: const Size.fromHeight(50),
-//                 backgroundColor: const Color(0xFF35CC8C),
-//               ),
-//               child: const Text("Save"),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   Widget _buildNutritionInfo(String label, String value) {
-//     return Column(
-//       children: [
-//         Text(
-//           value,
-//           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-//         ),
-//         Text(label, style: const TextStyle(color: Colors.grey)),
-//       ],
-//     );
-//   }
-// }
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:eat_fit/model/food_model.dart';
 import 'package:eat_fit/model/mock_data.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddMealScreen extends StatefulWidget {
   final String mealType;
@@ -345,6 +70,70 @@ class _AddMealScreenState extends State<AddMealScreen> {
       "carbs": totalCarbs,
     };
   }
+
+// save meal to fire
+  Future<void> _saveMealToFirebase() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception("No logged-in user found");
+      }
+
+      // Create the meal data to save
+      final mealData = {
+        'userId': user.uid, // Matches the Firestore rule
+        'mealType': widget.mealType,
+        'foods': _selectedFoods.map((food) => food.toMap()).toList(),
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      print("Meal data: $mealData"); // Debug log
+
+      // Save to the 'meals' collection in Firestore
+      await FirebaseFirestore.instance.collection('meals').add(mealData);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Meal saved successfully!")),
+      );
+
+      Navigator.pop(context);
+    } catch (error) {
+      print("Error: $error"); // Debug log for error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to save meal: $error")),
+      );
+    }
+  }
+
+  // Future<void> _saveMealToFirebase() async {
+  //   try {
+  //     final user = FirebaseAuth.instance.currentUser;
+  //     if (user == null) {
+  //       throw Exception("No logged-in user found");
+  //     }
+
+  //     // Create the meal data to save
+  //     final mealData = {
+  //       'uid': user.uid,
+  //       'mealType': widget.mealType,
+  //       'foods': _selectedFoods.map((food) => food.toMap()).toList(),
+  //       'timestamp': DateTime.now().toIso8601String(),
+  //     };
+
+  //     // Save to the 'meals' collection in Firestore
+  //     await FirebaseFirestore.instance.collection('meals').add(mealData);
+
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("Meal saved successfully!")),
+  //     );
+
+  //     Navigator.pop(context);
+  //   } catch (error) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text("Failed to save meal: $error")),
+  //     );
+  //   }
+  // }
 
   /// Displays the food details in a dialog
   void _showFoodDetails(BuildContext context, Food food) {
@@ -619,12 +408,27 @@ class _AddMealScreenState extends State<AddMealScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF35CC8C),
-        onPressed: () {
-          widget.onFoodAdded(_selectedFoods);
-          Navigator.pop(context);
+        onPressed: () async {
+          if (_selectedFoods.isNotEmpty) {
+            await _saveMealToFirebase();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text("Please add at least one food item")),
+            );
+          }
         },
         child: const Icon(Icons.check),
       ),
+
+      // floatingActionButton: FloatingActionButton(
+      //   backgroundColor: const Color(0xFF35CC8C),
+      //   onPressed: () {
+      //     widget.onFoodAdded(_selectedFoods);
+      //     Navigator.pop(context);
+      //   },
+      //   child: const Icon(Icons.check),
+      // ),
     );
   }
 
