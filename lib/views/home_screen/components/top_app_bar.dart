@@ -185,12 +185,6 @@ class TopAppBar extends StatelessWidget {
               ),
             ]
           : [], // Ensure no calendar icon when showCalendarIcon is false
-      // actions: [
-      //   IconButton(
-      //     icon: const Icon(Icons.calendar_today, color: Colors.black),
-      //     onPressed: onCalendarTap,
-      //   ),
-      // ],
     );
   }
 }

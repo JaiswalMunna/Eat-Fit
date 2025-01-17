@@ -1,7 +1,9 @@
+// import 'package:eat_fit/views/home_screen/profile/my_profile_screen.dart';
 // import 'package:flutter/material.dart';
 // import 'package:fl_chart/fl_chart.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:eat_fit/views/home_screen/components/top_app_bar.dart';
 
 // class ReportScreen extends StatefulWidget {
 //   const ReportScreen({Key? key}) : super(key: key);
@@ -30,27 +32,42 @@
 //   @override
 //   Widget build(BuildContext context) {
 //     return Scaffold(
-//       appBar: AppBar(
-//         backgroundColor: Colors.white,
-//         elevation: 0,
-//         centerTitle: true,
-//         title: const Text("Reports", style: TextStyle(color: Colors.black)),
-//         bottom: TabBar(
-//           controller: _tabController,
-//           indicatorColor: Colors.green,
-//           labelColor: Colors.green,
-//           unselectedLabelColor: Colors.grey,
-//           tabs: const [
-//             Tab(text: "Weight"),
-//             Tab(text: "Calories"),
-//           ],
+//       appBar: PreferredSize(
+//         preferredSize: const Size.fromHeight(70),
+//         child: TopAppBar(
+//           onProfileTap: () {
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (context) => const MyProfileScreen()),
+//             );
+//           },
+//           onCalendarTap: () {
+//             // Add logic for calendar navigation
+//           },
+//           showCalendarIcon: false, // Hide the calendar icon in ReportScreen
 //         ),
 //       ),
-//       body: TabBarView(
-//         controller: _tabController,
+//       body: Column(
 //         children: [
-//           _buildWeightReport(),
-//           _buildCaloriesReport(),
+//           TabBar(
+//             controller: _tabController,
+//             indicatorColor: Colors.green,
+//             labelColor: Colors.green,
+//             unselectedLabelColor: Colors.grey,
+//             tabs: const [
+//               Tab(text: "Weight"),
+//               Tab(text: "Calories"),
+//             ],
+//           ),
+//           Expanded(
+//             child: TabBarView(
+//               controller: _tabController,
+//               children: [
+//                 _buildWeightReport(),
+//                 _buildCaloriesReport(),
+//               ],
+//             ),
+//           ),
 //         ],
 //       ),
 //     );
@@ -133,7 +150,7 @@
 //               LineChartBarData(
 //                 isCurved: true,
 //                 spots: spots,
-//                 color: Color.fromARGB(255, 104, 159, 59),
+//                 color: Colors.green,
 //                 barWidth: 4,
 //               ),
 //             ],
@@ -196,12 +213,13 @@
 //   }
 // }
 
+import 'package:eat_fit/views/home_screen/components/top_app_bar.dart';
 import 'package:eat_fit/views/home_screen/profile/my_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:eat_fit/views/home_screen/components/top_app_bar.dart';
+import 'package:intl/intl.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({Key? key}) : super(key: key);
@@ -214,11 +232,64 @@ class _ReportScreenState extends State<ReportScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _selectedPeriod = "Week";
+  List<Map<String, dynamic>> _weightData = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _fetchWeightData();
+  }
+
+  Future<void> _fetchWeightData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        throw Exception("No logged-in user.");
+      }
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('weights')
+          .doc(user.uid)
+          .get();
+
+      if (snapshot.exists) {
+        final data = snapshot.data();
+        final List<dynamic> weights = data?['weights'] ?? [];
+
+        // Keep the latest weight entry for each day
+        final Map<String, Map<String, dynamic>> latestWeightsPerDay = {};
+        for (var entry in weights) {
+          final date = entry['date'];
+          if (!latestWeightsPerDay.containsKey(date) ||
+              latestWeightsPerDay[date]!['weight'] != entry['weight']) {
+            latestWeightsPerDay[date] = entry;
+          }
+        }
+
+        setState(() {
+          _weightData = latestWeightsPerDay.values.toList();
+          _weightData.sort((a, b) =>
+              DateTime.parse(a['date']).compareTo(DateTime.parse(b['date'])));
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error fetching weight data: $e")),
+      );
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  List<FlSpot> _generateWeightSpots() {
+    return _weightData.asMap().entries.map((entry) {
+      return FlSpot(entry.key.toDouble(), entry.value['weight'].toDouble());
+    }).toList();
   }
 
   @override
@@ -242,7 +313,7 @@ class _ReportScreenState extends State<ReportScreen>
           onCalendarTap: () {
             // Add logic for calendar navigation
           },
-          showCalendarIcon: false, // Hide the calendar icon in ReportScreen
+          showCalendarIcon: false,
         ),
       ),
       body: Column(
@@ -261,8 +332,10 @@ class _ReportScreenState extends State<ReportScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildWeightReport(),
-                _buildCaloriesReport(),
+                _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _buildWeightReport(),
+                const Center(child: Text("Calories Report Coming Soon")),
               ],
             ),
           ),
@@ -275,38 +348,76 @@ class _ReportScreenState extends State<ReportScreen>
     return Column(
       children: [
         _buildPeriodDropdown(),
-        _buildGraphPlaceholder(
-          "Weight Trends",
-          [
-            FlSpot(0, 80),
-            FlSpot(1, 82),
-            FlSpot(2, 83.5),
-            FlSpot(3, 81.5),
-          ],
-          "Date",
-          "Weight",
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: LineChart(
+              LineChartData(
+                lineBarsData: [
+                  LineChartBarData(
+                    isCurved: true,
+                    spots: _generateWeightSpots(),
+                    color: Colors.green,
+                    barWidth: 4,
+                  ),
+                ],
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toStringAsFixed(0),
+                          style: const TextStyle(fontSize: 12),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (value, meta) {
+                        if (value < 0 || value >= _weightData.length)
+                          return Container();
+                        final date = _weightData[value.toInt()]['date'];
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            DateFormat('MMM dd').format(DateTime.parse(date)),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(
+                  show: true,
+                  border: const Border(
+                    left: BorderSide(width: 1),
+                    bottom: BorderSide(width: 1),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
-        _buildHistoryList("Weight", "kg"),
-      ],
-    );
-  }
-
-  Widget _buildCaloriesReport() {
-    return Column(
-      children: [
-        _buildPeriodDropdown(),
-        _buildGraphPlaceholder(
-          "Calories Trends",
-          [
-            FlSpot(0, 2000),
-            FlSpot(1, 2200),
-            FlSpot(2, 2500),
-            FlSpot(3, 2300),
-          ],
-          "Date",
-          "Calories",
+        Expanded(
+          child: ListView.builder(
+            itemCount: _weightData.length,
+            itemBuilder: (context, index) {
+              final entry = _weightData[index];
+              return ListTile(
+                title: Text(DateFormat('MMM dd, yyyy')
+                    .format(DateTime.parse(entry['date']))),
+                trailing: Text("${entry['weight']} kg"),
+              );
+            },
+          ),
         ),
-        _buildHistoryList("Calories", "cal"),
       ],
     );
   }
@@ -333,79 +444,6 @@ class _ReportScreenState extends State<ReportScreen>
             },
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildGraphPlaceholder(
-      String title, List<FlSpot> spots, String xLabel, String yLabel) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: LineChart(
-          LineChartData(
-            lineBarsData: [
-              LineChartBarData(
-                isCurved: true,
-                spots: spots,
-                color: Colors.green,
-                barWidth: 4,
-              ),
-            ],
-            titlesData: FlTitlesData(
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 40,
-                  getTitlesWidget: (value, meta) {
-                    return Text(
-                      value.toStringAsFixed(0),
-                      style: const TextStyle(fontSize: 12),
-                    );
-                  },
-                ),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 40,
-                  getTitlesWidget: (value, meta) {
-                    List<String> dates = ["Oct", "Nov", "Dec", "Jan"];
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        dates[value.toInt() % dates.length],
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            gridData: FlGridData(show: true),
-            borderData: FlBorderData(
-              show: true,
-              border: const Border(
-                left: BorderSide(width: 1),
-                bottom: BorderSide(width: 1),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryList(String label, String unit) {
-    return Expanded(
-      child: ListView.builder(
-        itemCount: 5,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text("Dec ${20 - index}, 2024"),
-            trailing: Text("${75 + index * 1.5} $unit"),
-          );
-        },
       ),
     );
   }
