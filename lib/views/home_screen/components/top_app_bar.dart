@@ -91,11 +91,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 class TopAppBar extends StatelessWidget {
   final VoidCallback onProfileTap;
   final VoidCallback onCalendarTap;
+  final bool showCalendarIcon; // New parameter to toggle calendar icon
 
   const TopAppBar({
     super.key,
     required this.onProfileTap,
     required this.onCalendarTap,
+    this.showCalendarIcon = true, // Default is true to show the calendar icon
   });
 
   @override
@@ -117,12 +119,20 @@ class TopAppBar extends StatelessWidget {
             ),
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today, color: Colors.black),
-            onPressed: onCalendarTap,
-          ),
-        ],
+        actions: showCalendarIcon
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.calendar_today, color: Colors.black),
+                  onPressed: onCalendarTap,
+                ),
+              ]
+            : null, // Hide calendar icon if showCalendarIcon is false
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.calendar_today, color: Colors.black),
+        //     onPressed: onCalendarTap,
+        //   ),
+        // ],
       );
     }
 
@@ -167,12 +177,20 @@ class TopAppBar extends StatelessWidget {
           );
         },
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.calendar_today, color: Colors.black),
-          onPressed: onCalendarTap,
-        ),
-      ],
+      actions: showCalendarIcon
+          ? [
+              IconButton(
+                icon: const Icon(Icons.calendar_today, color: Colors.black),
+                onPressed: onCalendarTap,
+              ),
+            ]
+          : [], // Ensure no calendar icon when showCalendarIcon is false
+      // actions: [
+      //   IconButton(
+      //     icon: const Icon(Icons.calendar_today, color: Colors.black),
+      //     onPressed: onCalendarTap,
+      //   ),
+      // ],
     );
   }
 }
