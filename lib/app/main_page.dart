@@ -42,8 +42,8 @@ class MainPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasData) {
             // User is logged in
-            // return const HomeScreen();
-            return const DiaryScreen();
+            return const HomeScreen();
+            // return const DiaryScreen();
           } else {
             // User is not logged in
             return const LoginScreen();
