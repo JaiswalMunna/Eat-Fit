@@ -72,7 +72,7 @@ class _WaterConsumedState extends State<WaterConsumed> {
                     decoration: BoxDecoration(
                       color: Colors.grey.shade300,
                       borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(5)),
+                          const BorderRadius.vertical(top: Radius.circular(5)),
                     ),
                   ),
                   Container(
@@ -84,7 +84,7 @@ class _WaterConsumedState extends State<WaterConsumed> {
                         stops: [0.0, 1.0],
                       ),
                       borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(5)),
+                          BorderRadius.vertical(top: Radius.circular(5)),
                     ),
                   ),
                 ],
@@ -119,7 +119,7 @@ class _WaterConsumedState extends State<WaterConsumed> {
             decoration: InputDecoration(
               isDense: true,
               contentPadding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(5),
               ),

@@ -44,7 +44,12 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
 
             // Nutrients Indicator Component
-            const NutrientsIndicator(),
+            const NutrientsIndicator(
+              totalCalories: 0, // Replace with the actual value later
+              totalProteins: 0, // Replace with the actual value later
+              totalFats: 0, // Replace with the actual value later
+              totalCarbs: 0, // Replace with the actual value later
+            ),
             const SizedBox(height: 20),
 
             // Water Intake Component

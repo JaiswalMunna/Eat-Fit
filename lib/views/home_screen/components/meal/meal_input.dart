@@ -112,7 +112,7 @@ class MealInput extends StatelessWidget {
         foods.fold<int>(0, (sum, food) => sum + food.calories);
 
     return Card(
-      color: const Color.fromARGB(255, 254, 253, 251),
+      color: const Color.fromARGB(255, 255, 255, 255),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
