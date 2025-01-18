@@ -16,6 +16,7 @@
 //     with SingleTickerProviderStateMixin {
 //   late TabController _tabController;
 //   String _selectedPeriod = "Week";
+//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
 //   @override
 //   void initState() {
@@ -41,9 +42,7 @@
 //               MaterialPageRoute(builder: (context) => const MyProfileScreen()),
 //             );
 //           },
-//           onCalendarTap: () {
-//             // Add logic for calendar navigation
-//           },
+//           onCalendarTap: () {},
 //           showCalendarIcon: false, // Hide the calendar icon in ReportScreen
 //         ),
 //       ),
@@ -74,42 +73,76 @@
 //   }
 
 //   Widget _buildWeightReport() {
-//     return Column(
-//       children: [
-//         _buildPeriodDropdown(),
-//         _buildGraphPlaceholder(
-//           "Weight Trends",
-//           [
-//             FlSpot(0, 80),
-//             FlSpot(1, 82),
-//             FlSpot(2, 83.5),
-//             FlSpot(3, 81.5),
+//     return StreamBuilder<List<Map<String, dynamic>>>(
+//       stream: _fetchWeightData(),
+//       builder: (context, snapshot) {
+//         if (snapshot.connectionState == ConnectionState.waiting) {
+//           return const Center(child: CircularProgressIndicator());
+//         }
+//         if (snapshot.hasError) {
+//           return Center(child: Text("Error: ${snapshot.error}"));
+//         }
+
+//         final weightData = snapshot.data ?? [];
+//         final List<FlSpot> spots = [];
+//         final List<String> dates = [];
+
+//         for (int i = 0; i < weightData.length; i++) {
+//           final item = weightData[i];
+//           spots.add(FlSpot(i.toDouble(), item['weight'].toDouble()));
+//           dates.add(item['date']); // Collect the date for bottom titles
+//         }
+
+//         return Column(
+//           children: [
+//             _buildPeriodDropdown(),
+//             _buildGraphPlaceholder(
+//               "Weight Trends",
+//               spots,
+//               dates, // Pass dates to the graph placeholder
+//               "Weight",
+//             ),
+//             _buildHistoryList(weightData, "weight", "kg"),
 //           ],
-//           "Date",
-//           "Weight",
-//         ),
-//         _buildHistoryList("Weight", "kg"),
-//       ],
+//         );
+//       },
 //     );
 //   }
 
 //   Widget _buildCaloriesReport() {
-//     return Column(
-//       children: [
-//         _buildPeriodDropdown(),
-//         _buildGraphPlaceholder(
-//           "Calories Trends",
-//           [
-//             FlSpot(0, 2000),
-//             FlSpot(1, 2200),
-//             FlSpot(2, 2500),
-//             FlSpot(3, 2300),
+//     return StreamBuilder<List<Map<String, dynamic>>>(
+//       stream: _fetchCalorieData(),
+//       builder: (context, snapshot) {
+//         if (snapshot.connectionState == ConnectionState.waiting) {
+//           return const Center(child: CircularProgressIndicator());
+//         }
+//         if (snapshot.hasError) {
+//           return Center(child: Text("Error: ${snapshot.error}"));
+//         }
+
+//         final calorieData = snapshot.data ?? [];
+//         final List<FlSpot> spots = [];
+//         final List<String> dates = [];
+
+//         for (int i = 0; i < calorieData.length; i++) {
+//           final item = calorieData[i];
+//           spots.add(FlSpot(i.toDouble(), item['calories'].toDouble()));
+//           dates.add(item['date']); // Collect the date for the x-axis
+//         }
+
+//         return Column(
+//           children: [
+//             _buildPeriodDropdown(),
+//             _buildGraphPlaceholder(
+//               "Calorie Trends",
+//               spots,
+//               dates, // Pass dates for the x-axis
+//               "Calories",
+//             ),
+//             _buildHistoryList(calorieData, "calories", "cal"),
 //           ],
-//           "Date",
-//           "Calories",
-//         ),
-//         _buildHistoryList("Calories", "cal"),
-//       ],
+//         );
+//       },
 //     );
 //   }
 
@@ -140,16 +173,29 @@
 //   }
 
 //   Widget _buildGraphPlaceholder(
-//       String title, List<FlSpot> spots, String xLabel, String yLabel) {
+//       String title, List<FlSpot> spots, List<String> dates, String yLabel) {
+//     if (spots.isEmpty) {
+//       return const Center(
+//         child: Text("No data available", style: TextStyle(fontSize: 16)),
+//       );
+//     }
+
+//     final double minY =
+//         spots.map((spot) => spot.y).reduce((a, b) => a < b ? a : b) - 5;
+//     final double maxY =
+//         spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b) + 5;
+
 //     return Expanded(
 //       child: Padding(
 //         padding: const EdgeInsets.symmetric(horizontal: 16.0),
 //         child: LineChart(
 //           LineChartData(
+//             minY: minY > 0 ? minY : 0,
+//             maxY: maxY,
 //             lineBarsData: [
 //               LineChartBarData(
 //                 isCurved: true,
-//                 spots: spots,
+//                 spots: spots.reversed.toList(),
 //                 color: Colors.green,
 //                 barWidth: 4,
 //               ),
@@ -170,19 +216,27 @@
 //               bottomTitles: AxisTitles(
 //                 sideTitles: SideTitles(
 //                   showTitles: true,
-//                   reservedSize: 40,
+//                   reservedSize: 50,
 //                   getTitlesWidget: (value, meta) {
-//                     List<String> dates = ["Oct", "Nov", "Dec", "Jan"];
+//                     int index = value.toInt();
+//                     if (index < 0 || index >= dates.length)
+//                       return const SizedBox();
 //                     return Padding(
 //                       padding: const EdgeInsets.only(top: 8.0),
-//                       child: Text(
-//                         dates[value.toInt() % dates.length],
-//                         style: const TextStyle(fontSize: 12),
+//                       child: RotatedBox(
+//                         quarterTurns: 3,
+//                         child: Text(
+//                           dates[index],
+//                           style: const TextStyle(fontSize: 10),
+//                         ),
 //                       ),
 //                     );
 //                   },
 //                 ),
 //               ),
+//               rightTitles:
+//                   AxisTitles(sideTitles: SideTitles(showTitles: false)),
+//               topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
 //             ),
 //             gridData: FlGridData(show: true),
 //             borderData: FlBorderData(
@@ -198,28 +252,109 @@
 //     );
 //   }
 
-//   Widget _buildHistoryList(String label, String unit) {
+//   Widget _buildHistoryList(
+//       List<Map<String, dynamic>> data, String key, String unit) {
 //     return Expanded(
 //       child: ListView.builder(
-//         itemCount: 5,
+//         itemCount: data.length,
 //         itemBuilder: (context, index) {
+//           final item = data[index];
 //           return ListTile(
-//             title: Text("Dec ${20 - index}, 2024"),
-//             trailing: Text("${75 + index * 1.5} $unit"),
+//             title: Text(item['date']),
+//             trailing: Text("${item[key]} $unit"),
 //           );
 //         },
 //       ),
 //     );
 //   }
-// }
 
-import 'package:eat_fit/views/home_screen/components/top_app_bar.dart';
+//   Stream<List<Map<String, dynamic>>> _fetchWeightData() async* {
+//     final userId = FirebaseAuth.instance.currentUser?.uid;
+//     if (userId == null) throw Exception("User is not logged in");
+
+//     final DateTime now = DateTime.now();
+//     DateTime filterDate;
+
+//     switch (_selectedPeriod) {
+//       case "Week":
+//         filterDate = now.subtract(const Duration(days: 7));
+//         break;
+//       case "Month":
+//         filterDate = DateTime(now.year, now.month - 1, now.day);
+//         break;
+//       case "Year":
+//         filterDate = DateTime(now.year - 1, now.month, now.day);
+//         break;
+//       default:
+//         filterDate = DateTime(2000); // Default to fetch all data
+//     }
+
+//     final query = await _firestore.collection('weights').doc(userId).get();
+
+//     final List<dynamic> weights = query.data()?['weights'] ?? [];
+//     yield weights
+//         .where((entry) =>
+//             DateTime.parse(entry['date']).isAfter(filterDate)) // Filter by date
+//         .toList()
+//         .cast<Map<String, dynamic>>();
+//   }
+
+//   Stream<List<Map<String, dynamic>>> _fetchCalorieData() async* {
+//     final userId = FirebaseAuth.instance.currentUser?.uid;
+//     if (userId == null) throw Exception("User is not logged in");
+
+//     final DateTime now = DateTime.now();
+//     DateTime filterDate;
+
+//     // Determine the filter date based on the selected period
+//     switch (_selectedPeriod) {
+//       case "Week":
+//         filterDate = now.subtract(const Duration(days: 7));
+//         break;
+//       case "Month":
+//         filterDate = DateTime(now.year, now.month - 1, now.day);
+//         break;
+//       case "Year":
+//         filterDate = DateTime(now.year - 1, now.month, now.day);
+//         break;
+//       default:
+//         filterDate = DateTime(2000); // Default to fetch all data
+//     }
+
+//     try {
+//       // Fetch the calorie data from Firestore in ascending order
+//       final query = await _firestore
+//           .collection('daily_totals')
+//           .where('userId', isEqualTo: userId)
+//           .where(
+//             'date',
+//             isGreaterThanOrEqualTo: filterDate.toIso8601String().split("T")[0],
+//           )
+//           .orderBy('date', descending: false) // Fetch from old to new
+//           .get();
+
+//       // Map the data to a list of maps containing 'date' and 'calories'
+//       final calorieData = query.docs.map((doc) {
+//         final data = doc.data();
+//         return {
+//           'date': data['date'] ?? '',
+//           'calories': data['calories'] ?? 0,
+//         };
+//       }).toList();
+
+//       yield calorieData;
+//     } catch (e) {
+//       print("Error fetching calorie data: $e");
+//       yield [];
+//     }
+//   }
+// }
 import 'package:eat_fit/views/home_screen/profile/my_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
+import 'package:eat_fit/views/home_screen/components/top_app_bar.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({Key? key}) : super(key: key);
@@ -232,64 +367,19 @@ class _ReportScreenState extends State<ReportScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _selectedPeriod = "Week";
-  List<Map<String, dynamic>> _weightData = [];
-  bool _loading = true;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  late Future<List<Map<String, dynamic>>> _weightFuture;
+  late Future<List<Map<String, dynamic>>> _calorieFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _fetchWeightData();
-  }
 
-  Future<void> _fetchWeightData() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user == null) {
-        throw Exception("No logged-in user.");
-      }
-
-      final snapshot = await FirebaseFirestore.instance
-          .collection('weights')
-          .doc(user.uid)
-          .get();
-
-      if (snapshot.exists) {
-        final data = snapshot.data();
-        final List<dynamic> weights = data?['weights'] ?? [];
-
-        // Keep the latest weight entry for each day
-        final Map<String, Map<String, dynamic>> latestWeightsPerDay = {};
-        for (var entry in weights) {
-          final date = entry['date'];
-          if (!latestWeightsPerDay.containsKey(date) ||
-              latestWeightsPerDay[date]!['weight'] != entry['weight']) {
-            latestWeightsPerDay[date] = entry;
-          }
-        }
-
-        setState(() {
-          _weightData = latestWeightsPerDay.values.toList();
-          _weightData.sort((a, b) =>
-              DateTime.parse(a['date']).compareTo(DateTime.parse(b['date'])));
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error fetching weight data: $e")),
-      );
-      setState(() {
-        _loading = false;
-      });
-    }
-  }
-
-  List<FlSpot> _generateWeightSpots() {
-    return _weightData.asMap().entries.map((entry) {
-      return FlSpot(entry.key.toDouble(), entry.value['weight'].toDouble());
-    }).toList();
+    // Initialize futures
+    _weightFuture = _fetchWeightData();
+    _calorieFuture = _fetchCalorieData();
   }
 
   @override
@@ -310,9 +400,7 @@ class _ReportScreenState extends State<ReportScreen>
               MaterialPageRoute(builder: (context) => const MyProfileScreen()),
             );
           },
-          onCalendarTap: () {
-            // Add logic for calendar navigation
-          },
+          onCalendarTap: () {},
           showCalendarIcon: false,
         ),
       ),
@@ -332,10 +420,8 @@ class _ReportScreenState extends State<ReportScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _buildWeightReport(),
-                const Center(child: Text("Calories Report Coming Soon")),
+                _buildWeightReport(),
+                _buildCaloriesReport(),
               ],
             ),
           ),
@@ -345,80 +431,71 @@ class _ReportScreenState extends State<ReportScreen>
   }
 
   Widget _buildWeightReport() {
-    return Column(
-      children: [
-        _buildPeriodDropdown(),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: LineChart(
-              LineChartData(
-                lineBarsData: [
-                  LineChartBarData(
-                    isCurved: true,
-                    spots: _generateWeightSpots(),
-                    color: Colors.green,
-                    barWidth: 4,
-                  ),
-                ],
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          value.toStringAsFixed(0),
-                          style: const TextStyle(fontSize: 12),
-                        );
-                      },
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (value, meta) {
-                        if (value < 0 || value >= _weightData.length)
-                          return Container();
-                        final date = _weightData[value.toInt()]['date'];
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            DateFormat('MMM dd').format(DateTime.parse(date)),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                gridData: FlGridData(show: true),
-                borderData: FlBorderData(
-                  show: true,
-                  border: const Border(
-                    left: BorderSide(width: 1),
-                    bottom: BorderSide(width: 1),
-                  ),
-                ),
-              ),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _weightFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
+
+        final weightData = snapshot.data ?? [];
+        final List<FlSpot> spots = [];
+        final List<String> dates = [];
+
+        for (int i = 0; i < weightData.length; i++) {
+          final item = weightData[i];
+          spots.add(FlSpot(i.toDouble(), item['weight'].toDouble()));
+          dates.add(item['date']);
+        }
+
+        return Column(
+          children: [
+            _buildPeriodDropdown(),
+            _buildGraphPlaceholder("Weight Trends", spots, dates, "Weight"),
+            _buildHistoryList(weightData, "weight", "kg"),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCaloriesReport() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _calorieFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
+
+        final calorieData = snapshot.data ?? [];
+        final List<FlSpot> spots = [];
+        final List<String> dates = [];
+
+        for (int i = 0; i < calorieData.length; i++) {
+          final item = calorieData[i];
+          spots.add(FlSpot(i.toDouble(), item['calories'].toDouble()));
+          dates.add(item['date']);
+        }
+
+        return Column(
+          children: [
+            _buildPeriodDropdown(),
+            _buildGraphPlaceholder(
+              "Calorie Trends",
+              spots,
+              dates,
+              "Calories",
             ),
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: _weightData.length,
-            itemBuilder: (context, index) {
-              final entry = _weightData[index];
-              return ListTile(
-                title: Text(DateFormat('MMM dd, yyyy')
-                    .format(DateTime.parse(entry['date']))),
-                trailing: Text("${entry['weight']} kg"),
-              );
-            },
-          ),
-        ),
-      ],
+            _buildHistoryList(calorieData, "calories", "cal"),
+          ],
+        );
+      },
     );
   }
 
@@ -440,11 +517,177 @@ class _ReportScreenState extends State<ReportScreen>
             onChanged: (value) {
               setState(() {
                 _selectedPeriod = value!;
+                _weightFuture = _fetchWeightData(); // Re-fetch data
+                _calorieFuture = _fetchCalorieData(); // Re-fetch data
               });
             },
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildGraphPlaceholder(
+      String title, List<FlSpot> spots, List<String> dates, String yLabel) {
+    if (spots.isEmpty) {
+      return const Center(
+        child: Text("No data available", style: TextStyle(fontSize: 16)),
+      );
+    }
+
+    final double minY =
+        spots.map((spot) => spot.y).reduce((a, b) => a < b ? a : b) - 5;
+    final double maxY =
+        spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b) + 5;
+
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: LineChart(
+          LineChartData(
+            minY: minY > 0 ? minY : 0,
+            maxY: maxY,
+            lineBarsData: [
+              LineChartBarData(
+                isCurved: true,
+                spots: spots.reversed.toList(),
+                color: Colors.green,
+                barWidth: 4,
+              ),
+            ],
+            titlesData: FlTitlesData(
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 40,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      value.toStringAsFixed(0),
+                      style: const TextStyle(fontSize: 12),
+                    );
+                  },
+                ),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 50,
+                  getTitlesWidget: (value, meta) {
+                    int index = value.toInt();
+                    if (index < 0 || index >= dates.length)
+                      return const SizedBox();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: RotatedBox(
+                        quarterTurns: 3,
+                        child: Text(
+                          dates[index],
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              rightTitles:
+                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            gridData: FlGridData(show: true),
+            borderData: FlBorderData(
+              show: true,
+              border: const Border(
+                left: BorderSide(width: 1),
+                bottom: BorderSide(width: 1),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryList(
+      List<Map<String, dynamic>> data, String key, String unit) {
+    return Expanded(
+      child: ListView.builder(
+        itemCount: data.length,
+        itemBuilder: (context, index) {
+          final item = data[index];
+          return ListTile(
+            title: Text(item['date']),
+            trailing: Text("${item[key]} $unit"),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchWeightData() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) throw Exception("User is not logged in");
+
+    final DateTime now = DateTime.now();
+    DateTime filterDate;
+
+    switch (_selectedPeriod) {
+      case "Week":
+        filterDate = now.subtract(const Duration(days: 7));
+        break;
+      case "Month":
+        filterDate = DateTime(now.year, now.month - 1, now.day);
+        break;
+      case "Year":
+        filterDate = DateTime(now.year - 1, now.month, now.day);
+        break;
+      default:
+        filterDate = DateTime(2000); // Default to fetch all data
+    }
+
+    final query = await _firestore.collection('weights').doc(userId).get();
+    final List<dynamic> weights = query.data()?['weights'] ?? [];
+    return weights
+        .where((entry) =>
+            DateTime.parse(entry['date']).isAfter(filterDate)) // Filter by date
+        .toList()
+        .cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchCalorieData() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) throw Exception("User is not logged in");
+
+    final DateTime now = DateTime.now();
+    DateTime filterDate;
+
+    switch (_selectedPeriod) {
+      case "Week":
+        filterDate = now.subtract(const Duration(days: 7));
+        break;
+      case "Month":
+        filterDate = DateTime(now.year, now.month - 1, now.day);
+        break;
+      case "Year":
+        filterDate = DateTime(now.year - 1, now.month, now.day);
+        break;
+      default:
+        filterDate = DateTime(2000);
+    }
+
+    final query = await _firestore
+        .collection('daily_totals')
+        .where('userId', isEqualTo: userId)
+        .where('date',
+            isGreaterThanOrEqualTo: filterDate.toIso8601String().split("T")[0])
+        .orderBy('date', descending: false)
+        .get();
+
+    return query.docs.map((doc) {
+      final data = doc.data();
+      return {
+        'date': data['date'] ?? '',
+        'calories': data['calories'] ?? 0,
+      };
+    }).toList();
   }
 }

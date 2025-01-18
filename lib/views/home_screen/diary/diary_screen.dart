@@ -662,6 +662,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
   /// Build a row displaying the total nutrition information
   Widget _buildNutritionInfoRow(Map<String, int> totals) {
+    _pushDailyTotalsToFirestore(totals);
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Container(
@@ -689,6 +691,69 @@ class _DiaryScreenState extends State<DiaryScreen> {
       ),
     );
   }
+
+  /// Push daily totals to Firestore
+  Future<void> _pushDailyTotalsToFirestore(Map<String, int> totals) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      print("No user logged in. Cannot save daily totals.");
+      return;
+    }
+
+    final today = DateTime.now();
+    final formattedDate =
+        "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+
+    final firestore = FirebaseFirestore.instance;
+
+    try {
+      await firestore
+          .collection('daily_totals')
+          .doc("$userId-$formattedDate")
+          .set({
+        'userId': userId,
+        'date': formattedDate,
+        'calories': totals['calories'] ?? 0,
+        'proteins': totals['proteins'] ?? 0,
+        'fats': totals['fats'] ?? 0,
+        'carbs': totals['carbs'] ?? 0,
+      });
+      print("Daily totals pushed to Firestore successfully.");
+    } catch (e) {
+      print("Failed to push daily totals to Firestore: $e");
+    }
+  }
+
+  // /// Build a row displaying the total nutrition information
+  // Widget _buildNutritionInfoRow(Map<String, int> totals) {
+  //   return Padding(
+  //     padding: const EdgeInsets.all(16.0),
+  //     child: Container(
+  //       padding: const EdgeInsets.all(16.0),
+  //       decoration: BoxDecoration(
+  //         borderRadius: BorderRadius.circular(10),
+  //         color: Colors.white,
+  //         boxShadow: [
+  //           BoxShadow(
+  //             color: Colors.grey.shade300,
+  //             blurRadius: 10,
+  //             offset: const Offset(0, 5),
+  //           ),
+  //         ],
+  //       ),
+  //       child: Row(
+  //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  //         children: [
+  //           _buildNutritionInfo("Calories", "${totals['calories']}"),
+  //           _buildNutritionInfo("Proteins", "${totals['proteins']}g"),
+  //           _buildNutritionInfo("Fats", "${totals['fats']}g"),
+  //           _buildNutritionInfo("Carbs", "${totals['carbs']}g"),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   /// Build individual nutrient info item
   Widget _buildNutritionInfo(String label, String value) {
@@ -746,25 +811,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
       );
     }
   }
-
-  // Future<void> _deleteFood(String mealId, Food food) async {
-  //   try {
-  //     print("Deleting food: ${food.toMap()} from mealId: $mealId");
-
-  //     await _firestore.collection('meals').doc(mealId).update({
-  //       'foods': FieldValue.arrayRemove([food.toMap()]),
-  //     });
-
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text("Food item deleted successfully!")),
-  //     );
-  //   } catch (e) {
-  //     print("Failed to delete food: $e");
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text("Failed to delete food: $e")),
-  //     );
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -914,12 +960,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
                     // Call the delete function
                     await _deleteFood(mealId, food);
                   },
-                  // onDeleteFood: (food) async {
-                  //   final mealId = mealIds["Lunch"];
-                  //   if (mealId != null) {
-                  //     await _deleteFood(mealId, food);
-                  //   }
-                  // },
                   onEditFood: (food, newGrams) async {
                     final mealId = mealIds["Lunch"];
                     if (mealId != null) {
