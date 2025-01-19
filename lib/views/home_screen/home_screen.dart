@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:eat_fit/model/food_model.dart';
+import 'package:eat_fit/shared/shared_date.dart';
+import 'package:eat_fit/views/home_screen/components/calendar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:eat_fit/views/home_screen/profile/my_profile_screen.dart';
@@ -16,8 +18,26 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+DateTime _selectedDate = DateTime.now(); // Add this to track the selected date
+
 class _HomeScreenState extends State<HomeScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  void _showCalendarDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) {
+        return CalendarSection(
+          selectedDate: selectedDateNotifier.value, // Use global value
+          onDateSelected: (date) {
+            selectedDateNotifier.value = date; // Update the global value
+            Navigator.pop(context); // Close the calendar dialog
+          },
+        );
+      },
+    );
+  }
 
   /// Fetch and calculate total nutrients from Firestore
   Stream<Map<String, int>> _fetchTotalNutrients() {
@@ -27,9 +47,22 @@ class _HomeScreenState extends State<HomeScreen> {
       throw Exception("User is not logged in.");
     }
 
+    // React to changes in the global selected date
+    final selectedDate = selectedDateNotifier.value;
+
+    final startOfDay = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
     return _firestore
         .collection('meals')
         .where('userId', isEqualTo: userId)
+        .where('timestamp',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('timestamp', isLessThan: Timestamp.fromDate(endOfDay))
         .snapshots()
         .map((snapshot) {
       int totalCalories = 0;
@@ -60,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color.fromRGBO(255, 255, 255, 1),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: TopAppBar(
@@ -70,9 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialPageRoute(builder: (context) => const MyProfileScreen()),
             );
           },
-          onCalendarTap: () {
-            Navigator.pushNamed(context, '/calendar');
-          },
+          onCalendarTap: () =>
+              _showCalendarDialog(context), // Call the calendar function
+          showCalendarIcon: true,
         ),
       ),
       body: StreamBuilder<Map<String, int>>(
