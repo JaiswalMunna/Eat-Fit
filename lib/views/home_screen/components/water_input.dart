@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'package:eat_fit/shared/shared_date.dart';
 
 class WaterConsumed extends StatefulWidget {
   const WaterConsumed({super.key});
@@ -8,9 +12,102 @@ class WaterConsumed extends StatefulWidget {
 }
 
 class _WaterConsumedState extends State<WaterConsumed> {
-  double _waterConsumed = 1.9; // Current water consumption in liters
+  double _waterConsumed = 0.0; // Current water consumption in liters
   double _targetWater = 2.5; // Target water consumption in liters
   int _glassSize = 150; // Glass size in ml
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWaterConsumed(); // Fetch water data for the selected date
+  }
+
+  /// Fetch water consumption for the selected date
+  Future<void> _fetchWaterConsumed() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        throw Exception("No logged-in user found.");
+      }
+
+      final selectedDate = selectedDateNotifier.value;
+      final formattedDate =
+          DateFormat('yyyy-MM-dd').format(selectedDate); // Selected date format
+
+      final waterDoc =
+          await _firestore.collection('water_consumption').doc(user.uid).get();
+
+      if (waterDoc.exists) {
+        final waterData = waterDoc.data()?['water'] as List<dynamic>? ?? [];
+        final entry = waterData.firstWhere(
+          (e) => e['date'] == formattedDate,
+          orElse: () => null,
+        );
+
+        setState(() {
+          _waterConsumed =
+              entry != null ? (entry['amount'] as num).toDouble() : 0.0;
+        });
+      } else {
+        setState(() {
+          _waterConsumed = 0.0; // Default to 0 if no data exists
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        print("Error fetching water consumption: $e");
+      }
+    }
+  }
+
+  /// Save water consumption for the selected date
+  Future<void> _saveWaterConsumed() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        throw Exception("No logged-in user found.");
+      }
+
+      final selectedDate = selectedDateNotifier.value;
+      final formattedDate =
+          DateFormat('yyyy-MM-dd').format(selectedDate); // Selected date format
+
+      final waterRef = _firestore.collection('water_consumption').doc(user.uid);
+
+      final waterDoc = await waterRef.get();
+      List<dynamic> waterData = waterDoc.data()?['water'] ?? [];
+
+      // Update existing entry or add a new one
+      bool updated = false;
+      for (var entry in waterData) {
+        if (entry['date'] == formattedDate) {
+          entry['amount'] = _waterConsumed;
+          updated = true;
+          break;
+        }
+      }
+
+      if (!updated) {
+        waterData.add({
+          'date': formattedDate,
+          'amount': _waterConsumed,
+        });
+      }
+
+      await waterRef.set({'water': waterData}, SetOptions(merge: true));
+      print("Water consumption saved successfully!");
+    } catch (e) {
+      print("Error saving water consumption: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +147,7 @@ class _WaterConsumedState extends State<WaterConsumed> {
                         _waterConsumed =
                             double.tryParse(value) ?? _waterConsumed;
                       });
+                      _saveWaterConsumed(); // Save to Firestore immediately
                     },
                   ),
                   _editableField(
@@ -81,7 +179,10 @@ class _WaterConsumedState extends State<WaterConsumed> {
                     width: 50,
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.blueAccent, Colors.blue],
+                        colors: [
+                          Color.fromARGB(255, 105, 224, 240),
+                          Colors.blue
+                        ],
                         stops: [0.0, 1.0],
                       ),
                       borderRadius:
@@ -106,11 +207,11 @@ class _WaterConsumedState extends State<WaterConsumed> {
                         label: "-",
                         onPressed: () {
                           setState(() {
-                            // Decrease water consumption
                             _waterConsumed = (_waterConsumed -
                                     (_glassSize / 1000)) // Convert ml to liters
                                 .clamp(0, _targetWater);
                           });
+                          _saveWaterConsumed(); // Save immediately
                         },
                       ),
                       const SizedBox(width: 10),
@@ -118,11 +219,11 @@ class _WaterConsumedState extends State<WaterConsumed> {
                         label: "+",
                         onPressed: () {
                           setState(() {
-                            // Increase water consumption
                             _waterConsumed = (_waterConsumed +
                                     (_glassSize / 1000)) // Convert ml to liters
                                 .clamp(0, _targetWater);
                           });
+                          _saveWaterConsumed(); // Save immediately
                         },
                       ),
                     ],
@@ -178,7 +279,7 @@ class _WaterConsumedState extends State<WaterConsumed> {
       style: ElevatedButton.styleFrom(
         shape: const CircleBorder(),
         padding: const EdgeInsets.all(8),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.green,
       ),
       child: Text(
         label,
@@ -191,10 +292,10 @@ class _WaterConsumedState extends State<WaterConsumed> {
   Widget _glassSizeButton(BuildContext context) {
     return TextButton.icon(
       onPressed: () => _showGlassSizeDialog(context),
-      icon: const Icon(Icons.edit, color: Colors.blueAccent),
+      icon: const Icon(Icons.edit, color: Colors.green),
       label: Text(
         "Glass Size: $_glassSize ml",
-        style: const TextStyle(fontSize: 14, color: Colors.blueAccent),
+        style: const TextStyle(fontSize: 14, color: Colors.green),
       ),
     );
   }

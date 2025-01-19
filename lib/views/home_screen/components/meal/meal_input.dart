@@ -181,7 +181,7 @@ class MealInput extends StatelessWidget {
                 onPressed: onAddMeal,
                 child: const Text(
                   "Add Food",
-                  style: TextStyle(color: Colors.blue),
+                  style: TextStyle(color: Colors.green),
                 ),
               ),
             ),

@@ -29,7 +29,9 @@ class BottomNavBar extends StatelessWidget {
               width: isSelected ? 90 : 60,
               height: isSelected ? 70 : 50,
               decoration: BoxDecoration(
-                color: isSelected ? Colors.green : Colors.transparent,
+                color: isSelected
+                    ? const Color.fromRGBO(76, 175, 80, 1)
+                    : Colors.transparent,
                 shape: BoxShape.circle,
               ),
               child: Column(
