@@ -204,6 +204,7 @@
 // }
 
 import 'package:eat_fit/controllers/auth_controller.dart';
+import 'package:eat_fit/views/auth%20screen/login_screen.dart';
 import 'package:flutter/material.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -445,6 +446,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Registration Navigation
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                  );
+                },
+                child: const Text(
+                  "Already Registered? Login",
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
